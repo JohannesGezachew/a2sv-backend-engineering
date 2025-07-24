@@ -268,7 +268,3 @@ The API handles various error scenarios:
 3. Make your changes
 4. Add tests if applicable
 5. Submit a pull request
-
-## License
-
-This project is for educational purposes as part of a Go programming task.

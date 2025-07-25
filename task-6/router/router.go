@@ -24,27 +24,25 @@ func SetupRouter() *gin.Engine {
 		log.Fatal("Failed to connect to MongoDB:", err)
 	}
 
-	// Initialize services and controllers
+	// Initialize services and controller
 	taskService := data.NewTaskService(client, dbConfig.Database, dbConfig.Collection)
-	taskController := controllers.NewTaskController(taskService)
-	
 	userService := data.NewUserService(client, dbConfig.Database)
-	userController := controllers.NewUserController(userService)
+	controller := controllers.NewController(taskService, userService)
 
 	// API versioning group
 	v1 := router.Group("/api/v1")
 	{
 		// Public authentication routes (no middleware required)
-		v1.POST("/register", userController.Register) // POST /api/v1/register
-		v1.POST("/login", userController.Login)       // POST /api/v1/login
+		v1.POST("/register", controller.Register) // POST /api/v1/register
+		v1.POST("/login", controller.Login)       // POST /api/v1/login
 
 		// Protected user routes (authentication required)
 		userRoutes := v1.Group("/users")
 		userRoutes.Use(middleware.AuthMiddleware())
 		{
-			userRoutes.GET("/profile", userController.GetProfile)                                    // GET /api/v1/users/profile
-			userRoutes.GET("", middleware.AdminMiddleware(), userController.GetAllUsers)             // GET /api/v1/users (admin only)
-			userRoutes.POST("/promote", middleware.AdminMiddleware(), userController.PromoteUser)    // POST /api/v1/users/promote (admin only)
+			userRoutes.GET("/profile", controller.GetProfile)                                    // GET /api/v1/users/profile
+			userRoutes.GET("", middleware.AdminMiddleware(), controller.GetAllUsers)             // GET /api/v1/users (admin only)
+			userRoutes.POST("/promote", middleware.AdminMiddleware(), controller.PromoteUser)    // POST /api/v1/users/promote (admin only)
 		}
 
 		// Protected task routes
@@ -52,13 +50,13 @@ func SetupRouter() *gin.Engine {
 		tasks.Use(middleware.AuthMiddleware()) // All task routes require authentication
 		{
 			// Read operations - accessible by all authenticated users (admin and regular users)
-			tasks.GET("", middleware.UserMiddleware(), taskController.GetAllTasks)       // GET /api/v1/tasks
-			tasks.GET("/:id", middleware.UserMiddleware(), taskController.GetTaskByID)   // GET /api/v1/tasks/:id
+			tasks.GET("", middleware.UserMiddleware(), controller.GetAllTasks)       // GET /api/v1/tasks
+			tasks.GET("/:id", middleware.UserMiddleware(), controller.GetTaskByID)   // GET /api/v1/tasks/:id
 			
 			// Write operations - accessible only by admins
-			tasks.POST("", middleware.AdminMiddleware(), taskController.CreateTask)       // POST /api/v1/tasks (admin only)
-			tasks.PUT("/:id", middleware.AdminMiddleware(), taskController.UpdateTask)    // PUT /api/v1/tasks/:id (admin only)
-			tasks.DELETE("/:id", middleware.AdminMiddleware(), taskController.DeleteTask) // DELETE /api/v1/tasks/:id (admin only)
+			tasks.POST("", middleware.AdminMiddleware(), controller.CreateTask)       // POST /api/v1/tasks (admin only)
+			tasks.PUT("/:id", middleware.AdminMiddleware(), controller.UpdateTask)    // PUT /api/v1/tasks/:id (admin only)
+			tasks.DELETE("/:id", middleware.AdminMiddleware(), controller.DeleteTask) // DELETE /api/v1/tasks/:id (admin only)
 		}
 	}
 
@@ -78,24 +76,22 @@ func SetupRouterWithClient(client *mongo.Client, dbConfig *data.DatabaseConfig) 
 	router := gin.Default()
 
 	taskService := data.NewTaskService(client, dbConfig.Database, dbConfig.Collection)
-	taskController := controllers.NewTaskController(taskService)
-	
 	userService := data.NewUserService(client, dbConfig.Database)
-	userController := controllers.NewUserController(userService)
+	controller := controllers.NewController(taskService, userService)
 
 	v1 := router.Group("/api/v1")
 	{
 		// Public authentication routes (no middleware required)
-		v1.POST("/register", userController.Register) // POST /api/v1/register
-		v1.POST("/login", userController.Login)       // POST /api/v1/login
+		v1.POST("/register", controller.Register) // POST /api/v1/register
+		v1.POST("/login", controller.Login)       // POST /api/v1/login
 
 		// Protected user routes (authentication required)
 		userRoutes := v1.Group("/users")
 		userRoutes.Use(middleware.AuthMiddleware())
 		{
-			userRoutes.GET("/profile", userController.GetProfile)                                    // GET /api/v1/users/profile
-			userRoutes.GET("", middleware.AdminMiddleware(), userController.GetAllUsers)             // GET /api/v1/users (admin only)
-			userRoutes.POST("/promote", middleware.AdminMiddleware(), userController.PromoteUser)    // POST /api/v1/users/promote (admin only)
+			userRoutes.GET("/profile", controller.GetProfile)                                    // GET /api/v1/users/profile
+			userRoutes.GET("", middleware.AdminMiddleware(), controller.GetAllUsers)             // GET /api/v1/users (admin only)
+			userRoutes.POST("/promote", middleware.AdminMiddleware(), controller.PromoteUser)    // POST /api/v1/users/promote (admin only)
 		}
 
 		// Protected task routes
@@ -103,13 +99,13 @@ func SetupRouterWithClient(client *mongo.Client, dbConfig *data.DatabaseConfig) 
 		tasks.Use(middleware.AuthMiddleware()) // All task routes require authentication
 		{
 			// Read operations - accessible by all authenticated users (admin and regular users)
-			tasks.GET("", middleware.UserMiddleware(), taskController.GetAllTasks)       // GET /api/v1/tasks
-			tasks.GET("/:id", middleware.UserMiddleware(), taskController.GetTaskByID)   // GET /api/v1/tasks/:id
+			tasks.GET("", middleware.UserMiddleware(), controller.GetAllTasks)       // GET /api/v1/tasks
+			tasks.GET("/:id", middleware.UserMiddleware(), controller.GetTaskByID)   // GET /api/v1/tasks/:id
 			
 			// Write operations - accessible only by admins
-			tasks.POST("", middleware.AdminMiddleware(), taskController.CreateTask)       // POST /api/v1/tasks (admin only)
-			tasks.PUT("/:id", middleware.AdminMiddleware(), taskController.UpdateTask)    // PUT /api/v1/tasks/:id (admin only)
-			tasks.DELETE("/:id", middleware.AdminMiddleware(), taskController.DeleteTask) // DELETE /api/v1/tasks/:id (admin only)
+			tasks.POST("", middleware.AdminMiddleware(), controller.CreateTask)       // POST /api/v1/tasks (admin only)
+			tasks.PUT("/:id", middleware.AdminMiddleware(), controller.UpdateTask)    // PUT /api/v1/tasks/:id (admin only)
+			tasks.DELETE("/:id", middleware.AdminMiddleware(), controller.DeleteTask) // DELETE /api/v1/tasks/:id (admin only)
 		}
 	}
 

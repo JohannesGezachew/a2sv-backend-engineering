@@ -1,47 +1,37 @@
-# Task Management REST API Documentation
+# Task Management API Documentation
 
 ## Overview
-This is a robust Task Management REST API built with Go and Gin Framework. The API provides CRUD operations for managing tasks with MongoDB persistent storage.
+
+The Task Management API is a RESTful web service that provides comprehensive task management functionality with JWT-based authentication and role-based authorization. The API supports user registration, authentication, and task CRUD operations with different access levels for administrators and regular users.
 
 ## Base URL
+
 ```
 http://localhost:8080
 ```
 
-## MongoDB Configuration
+## Authentication
 
-The API uses MongoDB for persistent data storage. Configure the connection using environment variables:
+The API uses JWT (JSON Web Tokens) for authentication. After successful login, include the JWT token in the Authorization header for protected endpoints:
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `MONGODB_URI` | `mongodb://localhost:27017` | MongoDB connection string |
-| `MONGODB_DATABASE` | `taskmanager` | Database name |
-| `MONGODB_COLLECTION` | `tasks` | Collection name |
-
-## Task Model
-
-Tasks are stored as MongoDB documents with the following structure:
-
-```json
-{
-  "id": "507f1f77bcf86cd799439011",
-  "title": "Complete project",
-  "description": "Finish the task management API",
-  "due_date": "2024-12-31T00:00:00Z",
-  "status": "pending",
-  "created_at": "2024-01-15T10:30:00Z",
-  "updated_at": "2024-01-15T10:30:00Z"
-}
+```
+Authorization: Bearer <your-jwt-token>
 ```
 
-**Note:** Task IDs are MongoDB ObjectIDs (24-character hexadecimal strings).
+## User Roles
 
-## Endpoints
+- **Admin**: Can create, update, delete tasks, view all users, and promote users
+- **User**: Can view tasks and their own profile
+- **First User**: The first registered user automatically becomes an admin
 
-### 1. Health Check
+## API Endpoints
+
+### Public Endpoints (No Authentication Required)
+
+#### 1. Health Check
 **GET** `/health`
 
-Check if the API is running.
+Check if the API server is running.
 
 **Response:**
 ```json
@@ -51,123 +41,379 @@ Check if the API is running.
 }
 ```
 
-### 2. Get All Tasks
+#### 2. User Registration
+**POST** `/api/v1/register`
+
+Register a new user account.
+
+**Request Body:**
+```json
+{
+  "username": "john_doe",
+  "password": "password123"
+}
+```
+
+**Response (201 Created):**
+```json
+{
+  "success": true,
+  "message": "User registered successfully",
+  "data": {
+    "id": "60f7b3b3b3b3b3b3b3b3b3b3",
+    "username": "john_doe",
+    "role": "admin",
+    "created_at": "2025-07-25T15:30:00Z",
+    "updated_at": "2025-07-25T15:30:00Z"
+  }
+}
+```
+
+**Error Response (409 Conflict):**
+```json
+{
+  "success": false,
+  "message": "Failed to create user",
+  "error": "username already exists"
+}
+```
+
+#### 3. User Login
+**POST** `/api/v1/login`
+
+Authenticate user and receive JWT token.
+
+**Request Body:**
+```json
+{
+  "username": "john_doe",
+  "password": "password123"
+}
+```
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Login successful",
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "user": {
+    "id": "60f7b3b3b3b3b3b3b3b3b3b3",
+    "username": "john_doe",
+    "role": "admin",
+    "created_at": "2025-07-25T15:30:00Z",
+    "updated_at": "2025-07-25T15:30:00Z"
+  }
+}
+```
+
+**Error Response (401 Unauthorized):**
+```json
+{
+  "success": false,
+  "message": "Authentication failed",
+  "error": "invalid credentials"
+}
+```
+
+### Protected Endpoints (Authentication Required)
+
+#### 4. Get User Profile
+**GET** `/api/v1/users/profile`
+
+Get the authenticated user's profile information.
+
+**Headers:**
+```
+Authorization: Bearer <jwt-token>
+```
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Profile retrieved successfully",
+  "data": {
+    "id": "60f7b3b3b3b3b3b3b3b3b3b3",
+    "username": "john_doe",
+    "role": "admin",
+    "created_at": "2025-07-25T15:30:00Z",
+    "updated_at": "2025-07-25T15:30:00Z"
+  }
+}
+```
+
+#### 5. Get All Tasks
 **GET** `/api/v1/tasks`
 
-Retrieve a list of all tasks from MongoDB.
+Retrieve all tasks (available to all authenticated users).
 
-**Response (Success):**
+**Headers:**
+```
+Authorization: Bearer <jwt-token>
+```
+
+**Response (200 OK):**
 ```json
 {
   "success": true,
   "message": "Tasks retrieved successfully",
   "data": [
     {
-      "id": "507f1f77bcf86cd799439011",
-      "title": "Complete project",
-      "description": "Finish the task management API",
-      "due_date": "2024-12-31T00:00:00Z",
+      "id": "60f7b3b3b3b3b3b3b3b3b3b4",
+      "title": "Complete Project Documentation",
+      "description": "Write comprehensive API documentation",
+      "due_date": "2025-08-01T00:00:00Z",
       "status": "pending",
-      "created_at": "2024-01-15T10:30:00Z",
-      "updated_at": "2024-01-15T10:30:00Z"
+      "created_at": "2025-07-25T15:30:00Z",
+      "updated_at": "2025-07-25T15:30:00Z"
     }
   ]
 }
 ```
 
-**Response (Database Error):**
-```json
-{
-  "success": false,
-  "message": "Failed to retrieve tasks",
-  "error": "database connection error"
-}
-```
-
-### 3. Get Task by ID
+#### 6. Get Task by ID
 **GET** `/api/v1/tasks/:id`
 
-Retrieve details of a specific task by MongoDB ObjectID.
+Retrieve a specific task by its ID (available to all authenticated users).
 
-**Parameters:**
-- `id` (path parameter): Task ObjectID (24-character hex string)
+**Headers:**
+```
+Authorization: Bearer <jwt-token>
+```
 
-**Response (Success):**
+**Response (200 OK):**
 ```json
 {
   "success": true,
   "message": "Task retrieved successfully",
   "data": {
-    "id": "507f1f77bcf86cd799439011",
-    "title": "Complete project",
-    "description": "Finish the task management API",
-    "due_date": "2024-12-31T00:00:00Z",
+    "id": "60f7b3b3b3b3b3b3b3b3b3b4",
+    "title": "Complete Project Documentation",
+    "description": "Write comprehensive API documentation",
+    "due_date": "2025-08-01T00:00:00Z",
     "status": "pending",
-    "created_at": "2024-01-15T10:30:00Z",
-    "updated_at": "2024-01-15T10:30:00Z"
+    "created_at": "2025-07-25T15:30:00Z",
+    "updated_at": "2025-07-25T15:30:00Z"
   }
 }
 ```
 
-**Response (Invalid ID Format):**
-```json
-{
-  "success": false,
-  "message": "Task not found",
-  "error": "invalid task ID format"
-}
-```
+### Admin-Only Endpoints (Admin Role Required)
 
-**Response (Not Found):**
-```json
-{
-  "success": false,
-  "message": "Task not found",
-  "error": "task not found"
-}
-```
-
-### 4. Create New Task
+#### 7. Create Task
 **POST** `/api/v1/tasks`
 
-Create a new task in MongoDB.
+Create a new task (admin only).
+
+**Headers:**
+```
+Authorization: Bearer <admin-jwt-token>
+Content-Type: application/json
+```
 
 **Request Body:**
 ```json
 {
-  "title": "Complete project",
-  "description": "Finish the task management API",
-  "due_date": "2024-12-31",
-  "status": "pending"
+  "title": "Complete Project Documentation",
+  "description": "Write comprehensive API documentation",
+  "status": "pending",
+  "due_date": "2025-08-01"
 }
 ```
 
-**Required Fields:**
-- `title` (string): Task title
-- `status` (string): Task status (pending, in_progress, completed)
-
-**Optional Fields:**
-- `description` (string): Task description
-- `due_date` (string): Due date in YYYY-MM-DD format
-
-**Response (Success):**
+**Response (201 Created):**
 ```json
 {
   "success": true,
   "message": "Task created successfully",
   "data": {
-    "id": "507f1f77bcf86cd799439011",
-    "title": "Complete project",
-    "description": "Finish the task management API",
-    "due_date": "2024-12-31T00:00:00Z",
+    "id": "60f7b3b3b3b3b3b3b3b3b3b4",
+    "title": "Complete Project Documentation",
+    "description": "Write comprehensive API documentation",
+    "due_date": "2025-08-01T00:00:00Z",
     "status": "pending",
-    "created_at": "2024-01-15T10:30:00Z",
-    "updated_at": "2024-01-15T10:30:00Z"
+    "created_at": "2025-07-25T15:30:00Z",
+    "updated_at": "2025-07-25T15:30:00Z"
   }
 }
 ```
 
-**Response (Validation Error):**
+#### 8. Update Task
+**PUT** `/api/v1/tasks/:id`
+
+Update an existing task (admin only).
+
+**Headers:**
+```
+Authorization: Bearer <admin-jwt-token>
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "title": "Updated Task Title",
+  "description": "Updated task description",
+  "status": "in_progress",
+  "due_date": "2025-08-05"
+}
+```
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Task updated successfully",
+  "data": {
+    "id": "60f7b3b3b3b3b3b3b3b3b3b4",
+    "title": "Updated Task Title",
+    "description": "Updated task description",
+    "due_date": "2025-08-05T00:00:00Z",
+    "status": "in_progress",
+    "created_at": "2025-07-25T15:30:00Z",
+    "updated_at": "2025-07-25T15:35:00Z"
+  }
+}
+```
+
+#### 9. Delete Task
+**DELETE** `/api/v1/tasks/:id`
+
+Delete a task (admin only).
+
+**Headers:**
+```
+Authorization: Bearer <admin-jwt-token>
+```
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Task deleted successfully"
+}
+```
+
+#### 10. Get All Users
+**GET** `/api/v1/users`
+
+Retrieve all users (admin only).
+
+**Headers:**
+```
+Authorization: Bearer <admin-jwt-token>
+```
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Users retrieved successfully",
+  "data": [
+    {
+      "id": "60f7b3b3b3b3b3b3b3b3b3b3",
+      "username": "john_doe",
+      "role": "admin",
+      "created_at": "2025-07-25T15:30:00Z",
+      "updated_at": "2025-07-25T15:30:00Z"
+    },
+    {
+      "id": "60f7b3b3b3b3b3b3b3b3b3b5",
+      "username": "jane_smith",
+      "role": "user",
+      "created_at": "2025-07-25T15:35:00Z",
+      "updated_at": "2025-07-25T15:35:00Z"
+    }
+  ]
+}
+```
+
+#### 11. Promote User
+**POST** `/api/v1/users/promote`
+
+Promote a user to admin role (admin only).
+
+**Headers:**
+```
+Authorization: Bearer <admin-jwt-token>
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "username": "jane_smith"
+}
+```
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "User promoted to admin successfully",
+  "data": {
+    "id": "60f7b3b3b3b3b3b3b3b3b3b5",
+    "username": "jane_smith",
+    "role": "admin",
+    "created_at": "2025-07-25T15:35:00Z",
+    "updated_at": "2025-07-25T15:40:00Z"
+  }
+}
+```
+
+## Task Status Values
+
+Tasks can have one of the following status values:
+- `pending` - Task is pending
+- `in_progress` - Task is currently being worked on
+- `completed` - Task has been completed
+
+## Error Responses
+
+### Authentication Errors
+
+**401 Unauthorized - Missing Token:**
+```json
+{
+  "success": false,
+  "message": "Authorization header required",
+  "error": "Missing Authorization header"
+}
+```
+
+**401 Unauthorized - Invalid Token:**
+```json
+{
+  "success": false,
+  "message": "Invalid or expired token",
+  "error": "token is malformed: token contains an invalid number of segments"
+}
+```
+
+**401 Unauthorized - Malformed Header:**
+```json
+{
+  "success": false,
+  "message": "Invalid authorization header format",
+  "error": "Authorization header must be in format: Bearer <token>"
+}
+```
+
+### Authorization Errors
+
+**403 Forbidden - Admin Required:**
+```json
+{
+  "success": false,
+  "message": "Access denied",
+  "error": "Admin privileges required"
+}
+```
+
+### Validation Errors
+
+**400 Bad Request - Invalid Input:**
 ```json
 {
   "success": false,
@@ -176,237 +422,137 @@ Create a new task in MongoDB.
 }
 ```
 
-### 5. Update Task
-**PUT** `/api/v1/tasks/:id`
-
-Update an existing task in MongoDB.
-
-**Parameters:**
-- `id` (path parameter): Task ObjectID (24-character hex string)
-
-**Request Body:**
-```json
-{
-  "title": "Updated task title",
-  "description": "Updated description",
-  "due_date": "2024-12-31",
-  "status": "in_progress"
-}
-```
-
-**Response (Success):**
-```json
-{
-  "success": true,
-  "message": "Task updated successfully",
-  "data": {
-    "id": "507f1f77bcf86cd799439011",
-    "title": "Updated task title",
-    "description": "Updated description",
-    "due_date": "2024-12-31T00:00:00Z",
-    "status": "in_progress",
-    "created_at": "2024-01-15T10:30:00Z",
-    "updated_at": "2024-01-15T11:45:00Z"
-  }
-}
-```
-
-**Response (Invalid ID):**
+**404 Not Found - Resource Not Found:**
 ```json
 {
   "success": false,
-  "message": "Failed to update task",
-  "error": "invalid task ID format"
-}
-```
-
-### 6. Delete Task
-**DELETE** `/api/v1/tasks/:id`
-
-Delete a specific task from MongoDB.
-
-**Parameters:**
-- `id` (path parameter): Task ObjectID (24-character hex string)
-
-**Response (Success):**
-```json
-{
-  "success": true,
-  "message": "Task deleted successfully"
-}
-```
-
-**Response (Not Found):**
-```json
-{
-  "success": false,
-  "message": "Failed to delete task",
+  "message": "Task not found",
   "error": "task not found"
 }
 ```
 
-**Response (Invalid ID):**
-```json
-{
-  "success": false,
-  "message": "Failed to delete task",
-  "error": "invalid task ID format"
-}
+## Usage Examples
+
+### 1. Complete User Registration and Login Flow
+
+```bash
+# 1. Register a new user
+curl -X POST http://localhost:8080/api/v1/register \
+  -H "Content-Type: application/json" \
+  -d '{"username": "john_doe", "password": "password123"}'
+
+# 2. Login to get JWT token
+curl -X POST http://localhost:8080/api/v1/login \
+  -H "Content-Type: application/json" \
+  -d '{"username": "john_doe", "password": "password123"}'
+
+# 3. Use the token for protected endpoints
+curl -X GET http://localhost:8080/api/v1/users/profile \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN_HERE"
 ```
 
-## Status Codes
+### 2. Task Management Flow (Admin)
 
-- `200 OK`: Successful GET, PUT, DELETE operations
-- `201 Created`: Successful POST operation
-- `400 Bad Request`: Invalid request payload, parameters, or ObjectID format
-- `404 Not Found`: Resource not found
-- `500 Internal Server Error`: Database connection or server error
+```bash
+# 1. Create a task (admin only)
+curl -X POST http://localhost:8080/api/v1/tasks \
+  -H "Authorization: Bearer YOUR_ADMIN_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Complete Project Documentation",
+    "description": "Write comprehensive API documentation",
+    "status": "pending",
+    "due_date": "2025-08-01"
+  }'
 
-## Valid Task Statuses
+# 2. Get all tasks
+curl -X GET http://localhost:8080/api/v1/tasks \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
 
-- `pending`: Task is pending
-- `in_progress`: Task is in progress
-- `completed`: Task is completed
+# 3. Update a task (admin only)
+curl -X PUT http://localhost:8080/api/v1/tasks/TASK_ID \
+  -H "Authorization: Bearer YOUR_ADMIN_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Updated Task Title",
+    "description": "Updated description",
+    "status": "in_progress",
+    "due_date": "2025-08-05"
+  }'
 
-## Error Response Format
-
-All error responses follow this format:
-```json
-{
-  "success": false,
-  "message": "Error description",
-  "error": "Detailed error message"
-}
+# 4. Delete a task (admin only)
+curl -X DELETE http://localhost:8080/api/v1/tasks/TASK_ID \
+  -H "Authorization: Bearer YOUR_ADMIN_JWT_TOKEN"
 ```
 
-## MongoDB Integration Details
+### 3. User Management Flow (Admin)
 
-### Connection Management
-- The API establishes a connection pool to MongoDB on startup
-- Connection parameters are configurable via environment variables
-- Graceful shutdown ensures proper connection cleanup
+```bash
+# 1. Get all users (admin only)
+curl -X GET http://localhost:8080/api/v1/users \
+  -H "Authorization: Bearer YOUR_ADMIN_JWT_TOKEN"
 
-### Data Persistence
-- All tasks are stored as BSON documents in MongoDB
-- ObjectIDs are automatically generated for new tasks
-- Timestamps are managed automatically (created_at, updated_at)
-
-### Error Handling
-- Database connection errors are handled gracefully
-- Invalid ObjectID formats return appropriate error messages
-- Network timeouts are configured with 10-second limits
-
-## Testing with Postman
-
-### Collection Setup
-1. Create a new Postman collection named "Task Management API - MongoDB"
-2. Set the base URL as a collection variable: `{{baseUrl}}` = `http://localhost:8080/api/v1`
-
-### Sample Requests
-
-#### 1. Create Task
-- Method: POST
-- URL: `{{baseUrl}}/tasks`
-- Body (JSON):
-```json
-{
-  "title": "Learn MongoDB with Go",
-  "description": "Complete MongoDB integration tutorial",
-  "due_date": "2024-02-15",
-  "status": "pending"
-}
+# 2. Promote a user to admin (admin only)
+curl -X POST http://localhost:8080/api/v1/users/promote \
+  -H "Authorization: Bearer YOUR_ADMIN_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"username": "jane_smith"}'
 ```
 
-#### 2. Get All Tasks
-- Method: GET
-- URL: `{{baseUrl}}/tasks`
+## Security Features
 
-#### 3. Get Task by ID
-- Method: GET
-- URL: `{{baseUrl}}/tasks/507f1f77bcf86cd799439011`
+1. **Password Hashing**: User passwords are hashed using bcrypt before storage
+2. **JWT Authentication**: Secure token-based authentication with expiration
+3. **Role-Based Authorization**: Different access levels for admin and regular users
+4. **Protected Routes**: All sensitive operations require valid authentication
+5. **Input Validation**: Request payloads are validated for required fields and formats
+6. **Error Handling**: Comprehensive error responses with appropriate HTTP status codes
 
-#### 4. Update Task
-- Method: PUT
-- URL: `{{baseUrl}}/tasks/507f1f77bcf86cd799439011`
-- Body (JSON):
-```json
-{
-  "title": "Learn MongoDB with Go - Updated",
-  "description": "Complete MongoDB integration and add indexes",
-  "due_date": "2024-02-20",
-  "status": "in_progress"
-}
+## Environment Variables
+
+The API uses the following environment variables:
+
+```env
+# MongoDB Configuration
+MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/?retryWrites=true&w=majority
+MONGODB_DATABASE=taskmanager
+MONGODB_COLLECTION=tasks
+
+# JWT Configuration
+JWT_SECRET=your-super-secret-jwt-key-here-make-it-long-and-random
+
+# Server Configuration
+PORT=8080
 ```
 
-#### 5. Delete Task
-- Method: DELETE
-- URL: `{{baseUrl}}/tasks/507f1f77bcf86cd799439011`
+## Testing
 
-## Running the API
+To test the API, ensure the server is running:
 
-### Prerequisites
-1. MongoDB installed and running (local or cloud)
-2. Go 1.21 or higher
-
-### Setup Steps
-1. Navigate to the project directory
-2. Install dependencies: `go mod tidy`
-3. Set environment variables (optional):
-   ```bash
-   export MONGODB_URI="mongodb://localhost:27017"
-   export MONGODB_DATABASE="taskmanager"
-   export MONGODB_COLLECTION="tasks"
-   ```
-4. Run the application: `go run main.go`
-5. The API will be available at `http://localhost:8080`
-
-## Project Structure
-
-```
-task_manager/
-├── main.go                    # Entry point with MongoDB connection
-├── controllers/
-│   └── task_controller.go     # HTTP request handlers
-├── models/
-│   └── task.go               # Data structures with BSON tags
-├── data/
-│   ├── database.go           # MongoDB connection utilities
-│   └── task_service.go       # Business logic with MongoDB operations
-├── router/
-│   └── router.go             # Route configuration
-├── docs/
-│   └── api_documentation.md  # This documentation
-└── go.mod                    # Go module with MongoDB driver
+```bash
+go run main.go
 ```
 
-## MongoDB Collections
+Then run the comprehensive test suite:
 
-### Tasks Collection Schema
-```javascript
-{
-  _id: ObjectId,           // MongoDB ObjectID (auto-generated)
-  title: String,           // Required
-  description: String,     // Optional
-  due_date: Date,         // Optional
-  status: String,         // Required (pending|in_progress|completed)
-  created_at: Date,       // Auto-generated
-  updated_at: Date        // Auto-updated
-}
+```bash
+go run test_api.go
 ```
 
-### Recommended Indexes
-For better performance, consider creating these indexes:
+The test suite covers:
+- Health check functionality
+- User registration and login
+- JWT token validation
+- Protected route access
+- Task CRUD operations
+- Role-based authorization
+- Error handling scenarios
 
-```javascript
-// Index on status for filtering
-db.tasks.createIndex({ "status": 1 })
+## Notes
 
-// Compound index for status and due_date
-db.tasks.createIndex({ "status": 1, "due_date": 1 })
-
-// Text index for searching titles and descriptions
-db.tasks.createIndex({ 
-  "title": "text", 
-  "description": "text" 
-})
-```
+- The first registered user automatically becomes an admin
+- JWT tokens expire after 24 hours
+- All timestamps are in ISO 8601 format
+- Task due dates should be in YYYY-MM-DD format
+- The API uses MongoDB for data persistence
+- All responses include success/failure indicators and descriptive messages

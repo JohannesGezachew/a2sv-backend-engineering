@@ -1,7 +1,7 @@
 # Task Management REST API Documentation
 
 ## Overview
-This is a simple Task Management REST API built with Go and Gin Framework. The API provides CRUD operations for managing tasks with an in-memory database.
+This is a Task Management REST API built with Go, Gin Framework, and MongoDB. The API provides CRUD operations for managing tasks with persistent MongoDB storage.
 
 ## Base URL
 ```
@@ -35,7 +35,7 @@ Retrieve a list of all tasks.
   "message": "Tasks retrieved successfully",
   "data": [
     {
-      "id": 1,
+      "id": "507f1f77bcf86cd799439011",
       "title": "Complete project",
       "description": "Finish the task management API",
       "due_date": "2024-12-31T00:00:00Z",
@@ -53,7 +53,7 @@ Retrieve a list of all tasks.
 Retrieve details of a specific task.
 
 **Parameters:**
-- `id` (path parameter): Task ID (integer)
+- `id` (path parameter): Task ID (MongoDB ObjectID - 24-character hexadecimal string)
 
 **Response (Success):**
 ```json
@@ -61,7 +61,7 @@ Retrieve details of a specific task.
   "success": true,
   "message": "Task retrieved successfully",
   "data": {
-    "id": 1,
+    "id": "507f1f77bcf86cd799439011",
     "title": "Complete project",
     "description": "Finish the task management API",
     "due_date": "2024-12-31T00:00:00Z",
@@ -110,7 +110,7 @@ Create a new task.
   "success": true,
   "message": "Task created successfully",
   "data": {
-    "id": 1,
+    "id": "507f1f77bcf86cd799439011",
     "title": "Complete project",
     "description": "Finish the task management API",
     "due_date": "2024-12-31T00:00:00Z",
@@ -136,7 +136,7 @@ Create a new task.
 Update an existing task.
 
 **Parameters:**
-- `id` (path parameter): Task ID (integer)
+- `id` (path parameter): Task ID (MongoDB ObjectID - 24-character hexadecimal string)
 
 **Request Body:**
 ```json
@@ -154,7 +154,7 @@ Update an existing task.
   "success": true,
   "message": "Task updated successfully",
   "data": {
-    "id": 1,
+    "id": "507f1f77bcf86cd799439011",
     "title": "Updated task title",
     "description": "Updated description",
     "due_date": "2024-12-31T00:00:00Z",
@@ -171,7 +171,7 @@ Update an existing task.
 Delete a specific task.
 
 **Parameters:**
-- `id` (path parameter): Task ID (integer)
+- `id` (path parameter): Task ID (MongoDB ObjectID - 24-character hexadecimal string)
 
 **Response (Success):**
 ```json
@@ -242,11 +242,11 @@ All error responses follow this format:
 
 #### 3. Get Task by ID
 - Method: GET
-- URL: `{{baseUrl}}/tasks/1`
+- URL: `{{baseUrl}}/tasks/507f1f77bcf86cd799439011`
 
 #### 4. Update Task
 - Method: PUT
-- URL: `{{baseUrl}}/tasks/1`
+- URL: `{{baseUrl}}/tasks/507f1f77bcf86cd799439011`
 - Body (JSON):
 ```json
 {
@@ -259,14 +259,57 @@ All error responses follow this format:
 
 #### 5. Delete Task
 - Method: DELETE
-- URL: `{{baseUrl}}/tasks/1`
+- URL: `{{baseUrl}}/tasks/507f1f77bcf86cd799439011`
+
+## Configuration
+
+The application supports the following environment variables for MongoDB configuration:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `MONGODB_URI` | `mongodb://localhost:27017` | MongoDB connection string |
+| `MONGODB_DATABASE` | `taskmanager` | Database name |
+| `MONGODB_COLLECTION` | `tasks` | Collection name |
+
+### Example Configuration
+
+For local MongoDB:
+```bash
+# Windows PowerShell
+$env:MONGODB_URI="mongodb://localhost:27017"
+$env:MONGODB_DATABASE="taskmanager"
+$env:MONGODB_COLLECTION="tasks"
+
+# Linux/macOS
+export MONGODB_URI="mongodb://localhost:27017"
+export MONGODB_DATABASE="taskmanager"
+export MONGODB_COLLECTION="tasks"
+```
+
+For MongoDB Atlas:
+```bash
+# Windows PowerShell
+$env:MONGODB_URI="mongodb+srv://username:password@cluster.mongodb.net/database?retryWrites=true&w=majority"
+
+# Linux/macOS
+export MONGODB_URI="mongodb+srv://username:password@cluster.mongodb.net/database?retryWrites=true&w=majority"
+```
 
 ## Running the API
 
 1. Navigate to the project directory
 2. Install dependencies: `go mod tidy`
-3. Run the application: `go run main.go`
-4. The API will be available at `http://localhost:8080`
+3. Set up environment variables (optional - defaults will be used if not set)
+4. Ensure MongoDB is running (locally or accessible via connection string)
+5. Run the application: `go run main.go`
+6. The API will be available at `http://localhost:8080`
+
+## Testing the API
+
+Run the included test script to verify all endpoints:
+```bash
+go run test_api.go
+```
 
 ## Project Structure
 
